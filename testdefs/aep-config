@@ -1,0 +1,8 @@
+# arm-probe configuration file
+#
+# setup name
+pandaboard
+
+# <device path>
+PROBE_DEVICE_HERE
+ VDD_ALL	0.100000	1	-0.072073	0.012679	-0.000164	0.000400	0	VDD	ROOT	#ff0000	SoC

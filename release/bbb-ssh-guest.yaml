@@ -1,0 +1,204 @@
+# submission YAML prototype for connecting to a BBB over ssh
+# as secondary connection.
+# whichever role is operating as the "host" must specify how to
+# authorize connections from other roles using the authorize: key
+# in the deployment. This allows the relevant Action to deploy the
+# necessary support. e.g. /root/.ssh/authorized_keys
+
+job_name: bbb-guest-ssh
+timeouts:
+  job:
+    minutes: 30
+  action:
+    minutes: 3
+  connection:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: release/bbb-ssh-guest.yaml
+  lava.series: release-testing
+  build-readme: http://snapshots.linaro.org/components/lava/standard/debian/stretch/armhf/2/debian-stretch-armmp-armhf-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-stretch-armmp-armhf/2/console
+  build-script: http://snapshots.linaro.org/components/lava/standard/debian/stretch/armhf/2/armmp-nfs.sh
+
+protocols:
+  lava-multinode:
+    # expect_role is used by the dispatcher and is part of delay_start
+    # host_role is used by the scheduler, unrelated to delay_start.
+    roles:
+      host:
+        device_type: beaglebone-black
+        count: 1
+        timeout:
+          minutes: 10
+      guest:
+        # protocol API call to make during protocol setup
+        request: lava-start
+        # set the role for which this role will wait
+        expect_role: host
+        timeout:
+          minutes: 15
+        # no device_type, just a connection
+        connection: ssh
+        count: 3
+        # each ssh connection will attempt to connect to the device of role 'host'
+        host_role: host
+
+actions:
+- deploy:
+    role:
+    - host
+    timeout:
+      minutes: 4
+    to: tftp
+    # authorize for ssh adds the ssh public key to authorized_keys
+    authorize: ssh
+
+    kernel:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/vmlinuz
+      type: zimage
+    ramdisk:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/initramfs.cpio.gz
+      compression: gz
+      # the bootloader needs a u-boot header on the modified ramdisk
+      add-header: u-boot
+    modules:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/modules.tar.gz
+      compression: gz
+    nfsrootfs:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/jessie-armhf-nfs.tar.gz
+      compression: gz
+    os: debian
+    dtb:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/dtbs/am335x-boneblack.dtb
+
+- deploy:
+    role:
+    - guest
+    timeout:  # timeout for the ssh connection attempt
+      seconds: 30
+    to: ssh
+    connection: ssh
+    os: debian
+    protocols:
+      lava-multinode:
+      - action: prepare-scp-overlay
+        request: lava-wait
+        # messageID matches hostID
+        messageID: ipv4
+        message:
+          # the key of the message matches value of the host_key
+          # the value of the message gets substituted
+          ipaddr: $ipaddr
+      timeout:  # delay_start timeout
+        minutes: 5
+
+- boot:
+    role:
+    - host
+    timeout:
+      minutes: 15
+    method: u-boot
+    commands: nfs
+    auto_login:
+      login_prompt: 'login:'
+      username: root
+    prompts:
+    - 'root@jessie:'
+    parameters:
+      shutdown-message: "reboot: Restarting system"
+
+- boot:
+    role:
+    - guest
+    timeout:
+      minutes: 3
+    prompts:
+    - 'root@jessie:'
+    parameters:
+      hostID: ipv4  # messageID
+      host_key: ipaddr  # message key
+    method: ssh
+
+- test:
+    role:
+    - host
+    timeout:
+      minutes: 30
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: install-ssh
+          description: "install step"
+          os:
+          - debian
+          scope:
+          - functional
+        install:
+          deps:
+          - openssh-server
+          - ntpdate
+          - net-tools
+        run:
+          steps:
+          - ntpdate-debian
+          - lava-network broadcast eth0
+          # messageID matches, message_key as the key.
+          - lava-send ipv4 ipaddr=$(lava-echo-ipv4 eth0)
+          - lava-send lava_start
+          - lava-sync clients
+      from: inline
+      name: ssh-inline
+      path: inline/ssh-install.yaml
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode02.yaml
+      name: singlenode-intermediate
+
+- test:
+    role:
+    - guest
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+      # run the inline last as the host is waiting for this final sync.
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: client-ssh
+          description: "client complete"
+          os:
+          - debian
+          scope:
+          - functional
+        run:
+          steps:
+          - df -h
+          - free
+          - lava-sync clients
+      from: inline
+      name: ssh-client
+      path: inline/ssh-client.yaml
+
+- test:
+    role:
+    - host
+    timeout:
+      minutes: 10
+    definitions:
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode03.yaml
+      name: singlenode-advanced

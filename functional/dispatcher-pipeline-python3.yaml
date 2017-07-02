@@ -1,0 +1,73 @@
+metadata:
+    format: Lava-Test Test Definition 1.0
+    name: lava-dispatcher-pipeline-unit-tests
+    description: "LAVA dispatcher pipeline python3 on Debian unstable"
+    "version": "1.1"
+    maintainer:
+        - neil.williams@linaro.org
+    os:
+        - ubuntu
+        - debian
+    scope:
+        - functional
+    devices:
+        - qemu
+
+# These tests may need up to 512M of RAM in the KVM
+# Check the mem_cpu option in the kvm.conf device_type.
+
+install:
+    deps:
+        - git
+        - bc
+        - pep8
+        - python3-serial
+        - python3-pexpect
+        - telnet
+        - python3-netifaces
+        - python3-requests
+        - python3-testscenarios
+        - u-boot-tools
+        - nfs-kernel-server
+        - tftpd-hpa
+        - qemu-system-x86
+        - python3-nose
+        - python3-zmq
+        - python3-configobj
+        - python3-guestfs
+        - libguestfs-tools
+        - python3-yaml
+        - python3-pep8
+        - python3-simplejson
+        - python3-six
+        - python3-urllib3
+        - python3-guestfs
+        - openssh-client
+        - ca-certificates
+        - locales
+        - rpcbind
+        - lxc
+        - python3-pyudev
+
+run:
+    steps:
+        # fix up the hosts file before installing apache
+        # need to have an image with backports enabled.
+        - echo 127.0.0.1   localhost `hostname` >> /etc/hosts
+        - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+        - git config --global user.name "LAVA"
+        - git config --global user.email "lava@lava.net"
+        - git clone http://git.linaro.org/lava/lava-dispatcher.git
+        - cd lava-dispatcher
+        # allow rpcinfo to find a useful service
+        - mkdir /etc/exports.d
+        - mkdir -p /var/lib/lava/dispatcher/tmp
+        - cp etc/lava-dispatcher-nfs.exports /etc/exports.d/
+        - exportfs -fa
+        - service nfs-kernel-server restart
+        - lava-test-case nfs --shell service nfs-kernel-server status
+        - lava-test-case rpcinfo --shell rpcinfo -u 127.0.0.1 nfs
+        - git log -n1
+        - ../functional/version-wrapper.py
+        - lava-test-case unittests --shell ../functional/unittests3.sh
+

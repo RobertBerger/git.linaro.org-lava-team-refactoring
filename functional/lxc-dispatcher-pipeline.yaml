@@ -1,0 +1,48 @@
+device_type: lxc
+job_name: lava-dispatcher pipeline unit tests
+timeouts:
+  job:
+    hours: 1
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: functional/qemu-dispatcher-pipeline.yaml
+  lava.series: release-testing
+
+protocols:
+  lava-lxc:
+    name: server-unittests
+    template: debian
+    distribution: debian
+    release: jessie
+    mirror: http://ftp.uk.debian.org/debian/
+
+actions:
+- deploy:
+    timeout:
+      minutes: 20
+    to: lxc
+    os: debian
+
+- boot:
+    method: lxc
+    timeout:
+      minutes: 2
+    prompts:
+    - 'root@(.*):/#'
+
+- test:
+    name: dispatcher-pipeline-unittests
+    timeout:
+      minutes: 45
+    definitions:
+    - repository: http://git.linaro.org/lava-team/refactoring.git
+      from: git
+      path: functional/dispatcher-pipeline-unit-tests.yaml
+      name: dispatcher-pipeline-unittests

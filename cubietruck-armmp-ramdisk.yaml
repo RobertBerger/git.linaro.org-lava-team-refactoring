@@ -1,0 +1,80 @@
+device_type: cubietruck
+
+job_name: 3.16.0-4-armmp-nfs
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: cubietruck-armmp-ramdisk.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 2
+    to: tftp
+    kernel:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/vmlinuz-3.16.0-4-armmp
+    ramdisk:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/initrd.img-armmp.cpio.gz.u-boot
+      header: u-boot
+      add-header: u-boot
+      compression: gz
+    os: oe
+    modules:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/modules.tgz
+      compression: gz
+    dtb:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/dtbs/sun7i-a20-cubietruck.dtb
+
+- boot:
+    method: u-boot
+    commands: ramdisk
+    type: bootz
+    prompts:
+    # escape the brackets to ensure that the prompt does not match
+    # kernel debug lines which may mention initramfs
+    - '\(initramfs\)'
+    timeout:
+      minutes: 4
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: modules
+          description: "modprobe network and sata"
+          os:
+          - debian
+          scope:
+          - functional
+        run:
+          steps:
+            # reduce kernel output
+            - dmesg -n 5
+            - lava-test-case udevadm --shell udevadm hwdb --update
+            - lava-test-case depmod --shell depmod -a
+            - lava-test-case modprobe --shell modprobe stmmac
+            - lava-test-case sata-mod --shell modprobe -a ahci_sunxi sd_mod sg ext4
+            - lava-test-case ifconfig --shell ifconfig eth0 up
+            - lava-test-case udhcpc --shell udhcpc
+            - dmesg -n 7
+      from: inline
+      name: modprobe-inline
+      path: inline/modprobe.yaml
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode01.yaml
+      name: singlenode-intermediate

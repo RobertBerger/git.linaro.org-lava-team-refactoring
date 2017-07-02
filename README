@@ -1,0 +1,84 @@
+README
+######
+
+Refactoring job layouts
+=======================
+
+0: YAML supports comments, so all jobs in this repository need to use
+   comments to explain why the jobs are as they are.
+   * Include details of why these files are used and not others.
+   * Include details of known problems - like an outdated kernel which
+     does not support a particular rootfs OS.
+   * Use standard images from images.validation.linaro.org/snapshots.linaro.org/components/lava/standard
+     wherever possible. Link to the README produced by the standard build
+     everytime a standard build is used.
+   * Comment liberally and be verbose but keep the comments relevant.
+     Avoid the "Sample job for" top level comment.
+
+1: Consistent structure of YAML
+   * Avoid shorthand syntax like ['blah', 'foo'] to make it easier to
+     add or update or comment on particular settings later. Lists and
+     dictionaries need to be multi-line.
+   * Highlight if an item is a list of dictionaries rather than just 
+     a list or just a dictionary, other than the list of action
+     dictionaries.
+   * Put the device_type and job_name at the top of the file
+   * Make the job_name unique and meaningful but do not make it so long
+     as to be hard to remember or understand. Use comments to clarify
+     what the job actually does.
+   * Timeouts, priority and visibility near the top of the file, before
+     the actions list of dictionaries.
+   * Jobs are to be priority medium and public visibility, unless
+     the device_type or image location requires otherwise.
+   * Be consistent in the ordering within dictionaries. It does not
+     matter to YAML or to LAVA but it helps readers understand the job.
+     e.g. when using lava-multinode protocol, put role list at the top of
+     the action stanza:
+
+  - deploy:
+     role:
+     - client
+     - server
+     timeout:
+       minutes: 10
+     to: tftp
+
+2: Use local/ for your own tests which involve SSH public keys or other
+   identifiers. local/ is listed in .gitignore.
+
+3: Use standard/ for jobs which both use standard builds *and* are
+   sufficiently stable that the job itself can be considered as a
+   standard job for others to use as a base for comparison.
+
+4: Multinode
+   * Always use inline definitions for calls from a test shell to the
+     Multinode API. This will support later work on describing the
+     multinode synchronisation flow in the UI.
+
+5: Documentation
+   * If there are particular issues which are common to a range of jobs
+     or all jobs of a device type or all jobs using a particular
+     protocol, add .rst documentation in docs.
+
+6: Avoid simply copying failure_retry into every job. A lot of the early
+   jobs have this due to early copying of unit test job files but it is
+   not necessary in most cases. Where failure_retry is needed or useful,
+   add a comment specifying why.
+
+7: Make test names useful so that queries and charts can be made more
+   easily.
+   * Avoid combining the job_name into the test name - let the test name
+     relate to the test definitions.
+   * The top level name for the test is not currently visible in the
+     UI, so omit.
+8: timeouts
+   * Make timeouts small with some margin so that these jobs will only
+     timeout when something is actually wrong on the instance.
+9: Avoid local configuration - the expectation is that these jobs will
+   be submitted to labs like Cambridge with PDU support. Extra support
+   for shutdown-message parameters can be kept as copies of files in
+   local/.
+10: Keep consistent indenting so that blocks can be copied and pasted
+    between jobs. Validate all jobs using the online YAML parser 
+    http://yaml-online-parser.appspot.com/?yaml=&type=json before
+    commit. Make it easy to compare definitions.

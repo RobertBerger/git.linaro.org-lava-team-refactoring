@@ -1,0 +1,72 @@
+device_type: qemu
+job_name: qemu, Debian wheezy with parameters
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+context:
+  arch: amd64
+  # comment out or change to user if the dispatcher does not support bridging.
+  netdevice: tap
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: kvm-params.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 5
+    to: tmpfs
+    images:
+        rootfs:
+          image_arg: -drive format=raw,file={rootfs}
+          url: http://images.validation.linaro.org/kvm/standard/stretch-2.img.gz
+          compression: gz
+    os: debian
+    root_partition: 1
+
+- boot:
+    method: qemu
+    media: tmpfs
+    timeout:
+      minutes: 5
+    prompts:
+    - "root@debian:"
+    auto_login:
+      login_prompt: "debian login:"
+      username: root
+
+- test:
+    timeout:
+      # uses install:deps, so takes longer than singlenode01
+      minutes: 5
+    definitions:
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/params/params.yaml
+      name: parse-params
+      parameters:
+        VARIABLE_NAME_1: "first variable value"
+        VARIABLE_NAME_2: "second value"
+    - from: git
+      repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      path: lava-test-shell/single-node/singlenode01.yaml
+      name: singlenode-basic
+    - from: git
+      repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      path: lava-test-shell/single-node/singlenode02.yaml
+      name: singlenode-intermediate
+    - from: git
+      repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      path: lava-test-shell/single-node/singlenode03.yaml
+      name: singlenode-advanced
+      revision: master
+    - from: git
+      repository: http://git.linaro.org/lava-team/refactoring.git
+      path: testdefs/testset01.yaml
+      name: testset-handler

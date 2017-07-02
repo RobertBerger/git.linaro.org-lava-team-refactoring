@@ -1,0 +1,111 @@
+device_type: lxc
+job_name: lxc-multinode
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: lxc-multinode.yaml
+
+protocols:
+  lava-multinode:
+    roles:
+      client:
+        count: 1
+        device_type: lxc
+      server:
+        count: 1
+        device_type: lxc
+  lava-lxc:
+    client:
+      name: lxc-client
+      template: debian
+      distribution: debian
+      release: sid
+      mirror: http://ftp.us.debian.org/debian/
+      security_mirror: http://mirror.csclub.uwaterloo.ca/debian-security/
+    server:
+      name: lxc-server
+      template: debian
+      distribution: debian
+      release: sid
+      mirror: http://ftp.us.debian.org/debian/
+      security_mirror: http://mirror.csclub.uwaterloo.ca/debian-security/
+
+actions:
+- deploy:
+    role:
+    - client
+    timeout:
+      minutes: 30
+    to: lxc
+    packages:
+    - systemd
+    - systemd-sysv
+    os: debian
+
+- deploy:
+    role:
+    - server
+    timeout:
+      minutes: 30
+    to: lxc
+    packages:
+    - systemd
+    - systemd-sysv
+    os: debian
+
+- boot:
+    role:
+    - client
+    prompts:
+    - 'root@(.*):/#'
+    timeout:
+      minutes: 5
+    method: lxc
+
+- boot:
+    role:
+    - server
+    prompts:
+    - 'root@(.*):/#'
+    timeout:
+      minutes: 5
+    method: lxc
+
+- test:
+    role:
+    - client
+    - server
+    timeout:
+      minutes: 15
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: network
+          description: "installation"
+          os:
+          - debian
+          scope:
+          - functional
+        install:
+          deps:
+          - lsb-release
+          - net-tools
+      from: inline
+      name: network
+      path: inline/network.yaml
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/multi-node/multinode01.yaml
+      name: multinode-basic
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests

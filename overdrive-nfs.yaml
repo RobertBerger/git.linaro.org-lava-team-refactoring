@@ -1,0 +1,47 @@
+job_name: overdrive test job
+device_type: overdrive
+timeouts:
+  job:
+    minutes: 10
+  action:
+    minutes: 3
+  connection:
+    minutes: 2
+
+priority: medium
+visibility: public
+
+actions:
+- deploy:
+    timeout:
+      minutes: 3
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/overdrive/Image
+    nfsrootfs:
+      url: http://images.validation.linaro.org/overdrive/linaro-jessie-developer-20160126-57.tar.gz
+      compression: gz
+      prefix: binary/
+    dtb:
+      url: http://images.validation.linaro.org/overdrive/amd-overdrive.dtb
+    os: debian
+
+- boot:
+    method: grub
+    commands: nfs
+    prompts:
+    - 'root@linaro-developer:'
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode02.yaml
+      name: singlenode-intermediate
+

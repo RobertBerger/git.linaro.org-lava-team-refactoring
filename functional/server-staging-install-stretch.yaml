@@ -1,0 +1,100 @@
+device_type: qemu
+job_name: install staging-repo packages on stretch
+
+timeouts:
+  job:
+    hours: 1
+  action:
+    minutes: 2
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+context:
+  arch: amd64
+  netdevice: tap
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: functional/server-staging-install.yaml
+  lava.series: release-testing
+  build-readme: http://snapshots.linaro.org/components/lava/standard/debian/stretch/amd64/large/2/debian-large-stretch-amd64-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-large-stretch-amd64-vm/2/console
+  build-log: http://snapshots.linaro.org/components/lava/standard/debian/stretch/amd64/large/2/vmdebootstrap.log
+
+actions:
+- deploy:
+    timeout:
+      minutes: 3
+    to: tmpfs
+    images: 
+        rootfs: 
+          image_arg: -drive format=raw,file={rootfs}
+          url: http://snapshots.linaro.org/components/lava/standard/debian/stretch/amd64/large/2/large-stretch.img.gz
+          sha256sum: 16cc48d5415fe7aec2a0e2835d99178bb098ffbd0ec30baafbaa9584efdbcc69
+          compression: gz
+    os: debian
+    root_partition: 1
+
+- boot:
+    timeout:
+      minutes: 2
+    method: qemu
+    media: tmpfs
+    prompts:
+    - "root@debian:"
+    auto_login:
+      login_prompt: "login:"
+      username: root
+
+- test:
+    timeout:
+      minutes: 45
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: staging-fresh-install
+          description: "Install staging directly onto stretch base"
+        run:
+          steps:
+          - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+          - apt -q update
+          - lava-test-case postgres --shell apt -y install postgresql
+          - apt -q update
+          - apt -q -y install python-django-kvstore python-django python-django-tables2
+          - wget http://images.validation.linaro.org/staging-repo/staging-repo.key.asc
+          - apt-key add staging-repo.key.asc
+          - echo "deb http://images.validation.linaro.org/staging-repo sid main" > /etc/apt/sources.list.d/lava-staging.list
+          - apt -q update
+          - DEBIAN_FRONTEND=noninteractive apt-get -y install lava-dispatcher lava-server
+          - lava-test-case ensite --shell a2ensite lava-server
+          - lava-test-case dpkg --shell dpkg-query -W lava-server
+          - a2dissite 000-default
+          - a2enmod proxy
+          - a2enmod proxy_http
+          - lava-test-case apache2 --shell apache2ctl restart
+          - ls -l /etc/lava-server
+          - lava-test-case env --shell cat /etc/lava-server/env.yaml
+          - lava-test-case server --shell service lava-server status
+          - lava-test-case master --shell service lava-master status
+          - lava-test-case slave --shell service lava-slave status
+          - lava-server manage migrate --no-color
+          # once helpers are available, add a device type, device & device dictionary here
+      from: inline
+      name: stretch-staging-install
+      path: inline/stretch-staging-install.yaml
+
+- test:
+    timeout:
+      minutes: 10
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode03.yaml
+      name: singlenode-advanced

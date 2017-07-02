@@ -1,0 +1,70 @@
+metadata:
+    format: Lava-Test Test Definition 1.0
+    name: lava-dispatcher-pipeline-unit-tests
+    description: "LAVA dispatcher pipeline unit tests on Debian unstable"
+    "version": "1.1"
+    maintainer:
+        - neil.williams@linaro.org
+    os:
+        - ubuntu
+        - debian
+    scope:
+        - functional
+    devices:
+        - qemu
+
+# These tests may need up to 512M of RAM in the KVM
+# Check the mem_cpu option in the kvm.conf device_type.
+
+install:
+    deps:
+        - git
+        - bc
+        - pep8
+        - python-lzma
+        - python-serial
+        - python-configglue
+        - python-pexpect
+        - lava-tool
+        - telnet
+        - python-netifaces
+        - python-requests
+        - python-testscenarios
+        - pylint
+        - u-boot-tools
+        - nfs-kernel-server
+        - tftpd-hpa
+        - qemu-system-x86
+        - python-nose
+        - python-zmq
+        - python-configobj
+        - python-guestfs
+        - libguestfs-tools
+        - rpcbind
+        - lxc
+        - python-pyudev
+
+run:
+    steps:
+        # fix up the hosts file before installing apache
+        # need to have an image with backports enabled.
+        - echo 127.0.0.1   localhost `hostname` >> /etc/hosts
+        - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+        - git clone git://git.linaro.org/lava/lava-dispatcher.git
+        - cd lava-dispatcher
+        # allow rpcinfo to find a useful service
+        - mkdir /etc/exports.d
+        - mkdir -p /var/lib/lava/dispatcher/tmp
+        - cp etc/lava-dispatcher-nfs.exports /etc/exports.d/
+        - exportfs -fa
+        - service nfs-kernel-server restart
+        - lava-test-case nfs --shell service nfs-kernel-server status
+        - lava-test-case rpcinfo --shell rpcinfo -u 127.0.0.1 nfs
+        - git log -n1
+        - ../functional/version-wrapper.py
+        - lava-test-case pep8 --shell pep8 --ignore E501 .
+        - lava-test-set start unittests
+        - lava-test-case unittests --shell ../functional/unittests.sh
+        - lava-test-set stop unittests
+        - ../functional/fixme-report.sh
+        - ../functional/pylint.sh "lava_dispatcher/pipeline"

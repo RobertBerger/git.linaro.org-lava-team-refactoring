@@ -1,0 +1,74 @@
+metadata:
+    format: Lava-Test Test Definition 1.0
+    name: lava-server-pipeline-unit-tests
+    description: "LAVA server pipeline branch unit tests on Debian stable"
+    "version": "1.0"
+    maintainer:
+        - neil.williams@linaro.org
+    os:
+        - debian
+    scope:
+        - functional
+    devices:
+        - qemu
+
+# The dependencies need a KVM of at least 2Gb in size.
+
+# These tests need at least 512M of RAM in the KVM
+# Check the mem_cpu option in the kvm.conf device_type.
+
+install:
+    deps:
+        - git
+        - pep8
+        - lava-tool
+        - python-psycopg2
+        - postgresql-9.4
+        - postgresql-client-9.4
+        - python-dateutil
+        - python-django
+        - python-django-tables2
+        - python-django-restricted-resource
+        - python-pygments
+        - python-simplejson
+        - python-twisted
+        - django-testscenarios
+        - qemu-system-x86
+        - python-configobj
+        - python-mocker
+        - python-markdown
+        - python-markupsafe
+        - python-netifaces
+        - python-zmq
+        - python-jinja2
+        - python-ldap
+        - python-urllib3
+        - python-voluptuous
+        - lava-coordinator
+        - locales
+        - lxc
+
+run:
+    steps:
+        # fix up the hosts file before installing apache
+        # need to have an image with backports enabled.
+        - echo 127.0.0.1   localhost `hostname` >> /etc/hosts
+        - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+        - lava-test-case uwsgi --shell apt -y install apache2 libapache2-mod-wsgi libapache2-mod-uwsgi
+        - wget http://images.validation.linaro.org/staging-repo/staging-repo.key.asc
+        - apt-key add staging-repo.key.asc
+        - echo "deb http://mirror.bytemark.co.uk/debian jessie-backports main" > /etc/apt/sources.list.d/lava-backports.list
+        - echo "deb http://images.validation.linaro.org/staging-repo sid main" > /etc/apt/sources.list.d/lava-staging.list
+        - apt -q update
+        - apt -q -y -t jessie-backports install python-django-kvstore python-django python-django-tables2 python-voluptuous
+        # devscripts needs to be installed without recommended packages.
+        - lava-test-case devscripts --shell apt -q --no-install-recommends -y install devscripts
+        - DEBIAN_FRONTEND=noninteractive apt -q -y install -o Dpkg::Options::="--force-confold" lava-dispatcher lava-server
+        - apt-get clean
+        - git clone http://git.linaro.org/lava/lava-server.git
+        - cd lava-server
+        - lava-test-case commitlog --shell git log -n1
+        - ../functional/version-wrapper.py
+        - lava-test-set start unittests
+        - ../functional/unittests.sh -v2
+        - lava-test-set stop unittests

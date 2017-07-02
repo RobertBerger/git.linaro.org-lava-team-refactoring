@@ -1,0 +1,51 @@
+device_type: x86
+job_name: x86-pipeline
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+   minutes: 5
+  extract-nfsrootfs:
+    seconds: 90
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: ipxe.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 2
+    modules_compression: xz
+    to: tftp
+    kernel:
+      url: http://ironhide.bounceme.net/x86-32/bzImage
+    ramdisk:
+      url: http://ironhide.bounceme.net/x86-32/rootfs.cpio.gz
+      compression: gz
+    modules:
+      url: http://ironhide.bounceme.net/x86-32/modules.tar
+    os: oe
+
+- boot:
+    method: ipxe
+    commands: ramdisk
+    prompts:
+    - 'root@debian:~#'
+    - '/ #'
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+     - repository: git://git.linaro.org/qa/test-definitions.git
+       from: git
+       path: ubuntu/smoke-tests-basic.yaml
+       name: smoke-tests
+     - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+       from: git
+       path: lava-test-shell/single-node/singlenode03.yaml
+       name: singlenode-advanced

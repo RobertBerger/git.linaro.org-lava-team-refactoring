@@ -1,0 +1,84 @@
+# Standard unstable amd64 JOB definition for QEMU
+device_type: qemu
+job_name: qemu amd64 standard test of Debian sid
+
+# the image itself is rebuilt more often than jessie.
+# request a rebuild if there are problems with package
+# installations.
+
+timeouts:
+  job:
+    minutes: 30
+  action:
+    minutes: 2
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: standard/qemu-amd64-standard-sid.yaml
+  lava.series: release-testing
+  build-readme: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/9/debian-jessie-amd64-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-unstable-amd64-vm/9/console
+  build-log: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/9/vmdebootstrap.log
+
+context:
+  arch: amd64
+  # comment out or change to user if the dispatcher does not support bridging.
+  netdevice: tap
+
+actions:
+- deploy:
+    timeout:
+      minutes: 3
+    to: tmpfs
+    images: 
+        rootfs: 
+          image_arg: -drive format=raw,file={rootfs}
+          # to improve performance with a transparent proxy, use http, not https
+          url: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/9/large-sid.img.gz
+          # url: http://images.validation.linaro.org/kvm/standard/large-sid-8.img.gz
+          sha256sum: c445eb8d5bee75db93282ecd7377cc4c84ef5a63ff72269a894dd26afaf1f5bf
+          compression: gz
+    os: debian
+    root_partition: 1
+
+- boot:
+    method: qemu
+    media: tmpfs
+    timeout:
+      minutes: 2
+    prompts:
+    - "root@debian:"
+    auto_login:
+      login_prompt: "login:"
+      username: root
+
+- test:
+    timeout:
+      minutes: 20
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: standard-debian-sid
+          description: "Basic system test command for Debian Unstable"
+        run:
+          steps:
+          - apt-get -q update
+          - apt -y upgrade
+          - apt -y dist-upgrade
+          - printenv
+      from: inline
+      name: debian-sid-inline
+      path: inline/debian-sid.yaml
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      from: git
+      path: lava-test-shell/single-node/singlenode03.yaml
+      name: singlenode-advanced

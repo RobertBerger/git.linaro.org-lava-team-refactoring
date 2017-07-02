@@ -1,0 +1,45 @@
+metadata:
+    name: lava-android-benchmark-lxc
+    format: "Lava-Test-Shell Test Definition 1.0"
+    description: "LXC android benchmarking"
+    maintainer:
+        - neil.williams@linaro.org
+    os:
+        - android
+    scope:
+        - performance
+    devices:
+        - lxc
+        - hi6220-hikey
+
+install:
+    git-repos:
+        - https://github.com/mwasilew/AndroidViewClient.git
+    steps:
+        - cd AndroidViewClient/
+        - python setup.py install
+    deps:
+        - wget
+        - git
+        - python-lxml
+        - python-pil
+        - python-setuptools
+
+params:
+    TEST_NAME: "geekbench"
+    APP_CONFIG_LIST: ""
+    LOOP_COUNT: 13
+    COLLECT_STREAMLINE: "false"
+    RECORD_CSV: "TRUE"
+    RECORD_STATISTICS: "TRUE"
+    VERBOSE_OUTPUT: "FALSE"
+
+run:
+    steps:
+        - ./scripts/make-adb-connection.sh
+        - ANDROID_SERIAL=`cat adb-connection.txt`
+        - rm adb-connection.txt
+        - adb shell id
+        - cd android
+        - ./$TEST_NAME/execute.sh --serial $ANDROID_SERIAL --loop-count "$LOOP_COUNT" --streamline "$COLLECT_STREAMLINE" --verbose-output $VERBOSE_OUTPUT --record-statistics $RECORD_STATISTICS --record-csv $RECORD_CSV
+        - cd ..

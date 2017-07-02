@@ -1,0 +1,101 @@
+device_type: hi6220-hikey
+job_name: hi6220-hikey antutu6.0 lxc 238 with sets
+timeouts:
+  job:
+    hours: 2
+  action:
+    minutes: 15
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: hikey-antutu6.0-lxc.yaml
+  reference_job: https://validation.linaro.org/scheduler/job/1239395.1
+  android.build: 238
+  android.url: http://builds.96boards.org/snapshots/hikey/linaro/aosp-master/238/
+
+protocols:
+  lava-lxc:
+    name: lxc-hikey-test
+    template: debian
+    distribution: debian
+    release: sid
+
+actions:
+- deploy:
+    namespace: tlxc
+    timeout:
+      minutes: 5
+    to: lxc
+    packages:
+    - adb
+    - fastboot
+    - usbutils
+    - git
+    - systemd  # needed for sid LXC
+    - systemd-sysv  # needed for sid LXC
+    - ca-certificates  # needed for git clone over https
+    - python-setuptools
+    - bc
+    - zip
+    os: debian
+
+- boot:
+    namespace: tlxc
+    prompts:
+    - 'root@(.*):/#'
+    - 'hikey:/'
+    timeout:
+      minutes: 5
+    method: lxc
+
+- deploy:
+    timeout:
+      minutes: 15
+    to: fastboot
+    namespace: droid
+    connection: lxc
+    images:
+      ptable:
+        url: http://images.validation.linaro.org/functional-test-images/hikey/ptable-aosp-8g.img
+      boot:
+        url: http://images.validation.linaro.org/functional-test-images/hikey/boot.img.xz
+        compression: xz
+      cache:
+        url: http://images.validation.linaro.org/functional-test-images/hikey/cache.img.xz
+        compression: xz
+      userdata:
+        url: http://images.validation.linaro.org/functional-test-images/hikey/userdata.img.xz
+        compression: xz
+      system:
+        url: http://images.validation.linaro.org/functional-test-images/hikey/system.img.xz
+        compression: xz
+    os: debian
+
+- boot:
+    namespace: droid
+    connection: serial
+    prompts:
+    - 'root@(.*):/#'
+    - 'hikey:/'
+    timeout:
+      minutes: 15
+    method: uefi-menu
+    commands: fastboot
+
+- test:
+    namespace: tlxc
+    connection: lxc
+    timeout:
+      hours: 1
+    definitions:
+    - repository: https://git.linaro.org/lava-team/refactoring.git/
+      from: git
+      parameters:
+        TEST_NAME: "antutu6.0"
+        "LOOP_COUNT": 3
+      path: android/lava-android-benchmark-lxc.yaml
+      name: first-cut-android

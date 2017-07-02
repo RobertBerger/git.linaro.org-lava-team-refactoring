@@ -1,0 +1,58 @@
+device_type: qemu
+job_name: qemu lava-dispatcher pipeline unit tests
+timeouts:
+  job:
+    hours: 1
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: functional/qemu-dispatcher-pipeline.yaml
+  build-readme: http://snapshots.linaro.org/components/lava/standard/debian/jessie/amd64/7/debian-jessie-amd64-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-stable-amd64-vm/7/console
+  build-log: http://snapshots.linaro.org/components/lava/standard/debian/jessie/amd64/7/vmdebootstrap.log
+  lava.series: release-testing
+
+context:
+  arch: amd64
+  netdevice: tap
+
+actions:
+- deploy:
+    timeout:
+      minutes: 20
+    to: tmpfs
+    images: 
+        rootfs: 
+          image_arg: -drive format=raw,file={rootfs}
+          url: http://images.validation.linaro.org/kvm/standard/large-stable-6.img.gz
+          sha256sum: 8c305938e973dcfe4b4d2cf4da242c2cc036dd2ea6c867cb21b967ae2d9a52d7
+          compression: gz
+    os: debian
+    root_partition: 1
+
+- boot:
+    method: qemu
+    media: tmpfs
+    timeout:
+      minutes: 2
+    prompts:
+    - "root@debian:"
+    auto_login:
+      login_prompt: "login:"
+      username: root
+
+- test:
+    name: dispatcher-pipeline-unittests
+    timeout:
+      minutes: 45
+    definitions:
+    - repository: http://git.linaro.org/lava-team/refactoring.git
+      from: git
+      path: functional/dispatcher-pipeline-unit-tests.yaml
+      name: dispatcher-pipeline-unittests

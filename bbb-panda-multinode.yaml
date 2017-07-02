@@ -1,0 +1,138 @@
+job_name: Mixed device type MultiNode use case
+visibility: public
+priority: medium
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 3
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: bbb-panda-multinode.yaml
+  build-readme: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/debian-armmp-armhf-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-armmp-armhf/4/console
+  build-script: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/armmp-nfs.sh
+
+protocols:
+  lava-multinode:
+    roles:
+      server:
+        device_type: beaglebone-black
+        count: 1
+      client:
+        device_type: panda
+        count: 1
+
+actions:
+- deploy:
+    role:
+    - client
+    timeout:
+      minutes: 3
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/vmlinuz
+      type: zimage
+    ramdisk:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/initramfs.cpio.gz
+      compression: gz
+      # the bootloader needs a u-boot header on the modified ramdisk
+      add-header: u-boot
+    modules:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/modules.tar.gz
+      compression: gz
+    # despite this being a Debian initramfs, it is not a complete Debian rootfs, so use oe compatibility
+    os: oe
+    dtb:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/dtbs/omap4-panda.dtb
+
+- deploy:
+    role:
+    - server
+    timeout:
+      minutes: 4
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/vmlinuz
+      type: zimage
+    ramdisk:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/initramfs.cpio.gz
+      compression: gz
+      # the bootloader needs a u-boot header on the modified ramdisk
+      add-header: u-boot
+    modules:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/modules.tar.gz
+      compression: gz
+    nfsrootfs:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/jessie-armhf-nfs.tar.gz
+      compression: gz
+    os: debian
+    dtb:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/dtbs/am335x-boneblack.dtb
+
+- boot:
+    role:
+    - client
+    method: u-boot
+    commands: ramdisk
+    prompts:
+    # escape the brackets to ensure that the prompt does not match
+    # kernel debug lines which may mention initramfs
+    - '\(initramfs\)'
+    timeout:
+      minutes: 3
+
+- boot:
+    role:
+    - server
+    method: u-boot
+    commands: nfs
+    type: bootz
+    auto_login:
+      login_prompt: 'login:'
+      username: root
+    prompts:
+    - 'root@jessie:'
+    timeout:
+      minutes: 2
+
+- test:
+    role:
+    - client
+    - server
+    timeout:
+      minutes: 10
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests-start
+    - from: inline
+      name: first-sync
+      repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: first-sync
+          description: "MultiNode sync example"
+        run:
+          steps:
+          - lava-sync smoke-tests
+      path: inline/sync.yaml
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests-parallel
+    - from: inline
+      name: last-sync
+      repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: first-sync
+          description: "MultiNode sync completion"
+        run:
+          steps:
+          - lava-sync final
+      path: inline/sync-final.yaml

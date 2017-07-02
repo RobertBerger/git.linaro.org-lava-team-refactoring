@@ -1,0 +1,133 @@
+device_type: panda
+
+job_name: LXC and panda
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 3
+priority: medium
+visibility: public
+
+tags:
+  - arm-energy-probe
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: panda-lxc-aep.yaml
+  build-readme: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/debian-armmp-armhf-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-armmp-armhf/4/console
+  build-script: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/armmp-nfs.sh
+
+protocols:
+  lava-lxc:
+    name: lxc-aep-test
+    template: debian
+    distribution: debian
+    release: jessie
+    mirror: http://mirror.bytemark.co.uk/debian
+
+actions:
+- deploy:
+    namespace: probe
+    timeout:
+      minutes: 5
+    to: lxc
+    packages:
+    - usbutils
+    - procps
+    - lsb-release
+    - util-linux
+    os: debian
+
+- boot:
+    namespace: probe
+    prompts:
+    - 'root@(.*):/#'
+    timeout:
+      minutes: 5
+    method: lxc
+
+- deploy:
+    namespace: testdevice
+    timeout:
+      minutes: 3
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/vmlinuz
+      type: zimage
+    ramdisk:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/initramfs.cpio.gz
+      compression: gz
+      # the bootloader needs a u-boot header on the modified ramdisk
+      add-header: u-boot
+    modules:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/modules.tar.gz
+      compression: gz
+    # despite this being a Debian initramfs, it is not a complete Debian rootfs, so use oe compatibility
+    os: oe
+    dtb:
+      url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/dtbs/omap4-panda.dtb
+
+- boot:
+    namespace: testdevice
+    method: u-boot
+    commands: ramdisk
+    prompts:
+    # escape the brackets to ensure that the prompt does not match
+    # kernel debug lines which may mention initramfs
+    - '\(initramfs\)'
+    timeout:
+      minutes: 3
+
+- test:
+    namespace: probe
+    timeout:
+      minutes: 5
+    definitions:
+    - repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: network
+          description: "Check for ARM probe inside LXC."
+          os:
+          - debian
+          scope:
+          - functional
+        install:
+          deps:
+          - net-tools
+          - usbutils
+        run:
+          steps:
+          - ip a
+          - ifconfig
+          - ls -lR /dev/
+          - lava-test-case usbserial --shell ls -l /dev/serial/by-id/usb-NXP_SEMICOND_ARM_Energy_Probe_S_NO44440001-if00
+          - lsusb
+      from: inline
+      name: network
+      path: inline/network.yaml
+
+- test:
+    namespace: testdevice
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests-panda
+
+- test:
+    namespace: probe
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests-probe

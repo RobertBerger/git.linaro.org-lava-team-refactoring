@@ -1,0 +1,52 @@
+device_type: mustang
+job_name: mustang-nfs-singlenode-jessie
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: mustang-nfs.yaml
+
+actions:
+- deploy:
+    dtb:
+      url: http://images-internal/mustang/mustang.dtb_1.11
+    kernel:
+      url: http://images-internal/mustang/uImage_1.11
+    nfsrootfs:
+      url: http://people.linaro.org/~neil.williams/arm64/debian-jessie-arm64-rootfs.tar.gz
+      compression: gz
+    os: debian
+    timeout:
+      minutes: 5
+    to: tftp
+
+- boot:
+    auto_login:
+      login_prompt: 'login:'
+      username: root
+    commands: nfs
+    method: u-boot
+    prompts:
+    - 'root@linaro-nano:'
+    timeout:
+      minutes: 5
+    type: bootm
+
+- test:
+    definitions:
+    - from: git
+      name: singlenode-advanced
+      path: singlenode/singlenode03.yaml
+      repository: 'http://git.linaro.org/people/neil.williams/temp-functional-tests.git'
+    timeout:
+      minutes: 5

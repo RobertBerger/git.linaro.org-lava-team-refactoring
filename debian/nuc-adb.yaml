@@ -1,0 +1,26 @@
+metadata:
+  name: nuc-adb-connect
+  format: "Lava-Test-Shell Test Definition 1.0"
+  description: "Connect to NUC via adb over TCP/IP"
+  maintainer:
+    - senthil.kumaran@linaro.org
+  os:
+    - debian
+  devices:
+    - adb-nuc
+  scope:
+    - functional
+
+install:
+  deps:
+    - android-tools-adb
+
+run:
+  steps:
+    - ping -c 4 `lava-target-ip`
+    - adb start-server
+    - adb connect `lava-target-ip`
+    - adb devices
+    - lava-test-case adb-sno --shell "adb get-serialno"
+    - adb get-serialno
+    - adb shell ls

@@ -1,0 +1,28 @@
+metadata:
+    format: Lava-Test Test Definition 1.0
+    name: oe-smoke-tests-basic
+    description: "Basic system test command for Linaro OpenEmbedded images"
+    maintainer:
+        - senthil.kumaran@linaro.org
+    os:
+        - openembedded
+    scope:
+        - functional
+    devices:
+        - hikey
+run:
+    steps:
+        # the image does not raise the interface itself
+        # force a DHCP request to avoid avahi using a zero conf address.
+        - udhcpc
+        - netstat
+        - ip a
+        - ifconfig
+        - df
+        - lava-test-case openembedded-pwd --shell pwd
+        - lava-test-case openembedded-uname --shell uname -a
+        - lava-test-case openembedded-ifconfig --shell ifconfig -a
+        - lava-test-case openembedded-route --shell route
+        - lava-test-case openembedded-ping --shell ping -c4 8.8.8.8
+        - lava-test-case openembedded-wget --shell wget http://www.google.com/index.html
+        - lava-test-case openembedded-lsusb --shell lsusb

@@ -1,0 +1,52 @@
+# Standard Jessie amd64 python3 watchdog test
+device_type: qemu
+job_name: Standard Jessie amd64 python3 watchdog test
+
+timeouts:
+  job:
+    hours: 1
+  action:
+    minutes: 2
+priority: medium
+visibility: public
+context:
+  arch: amd64
+  netdevice: tap
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: functional/jessie-python3-dispatcher.yaml
+  lava.series: release-testing
+
+actions:
+    - deploy:
+        timeout:
+          minutes: 2
+        to: tmpfs
+        images: 
+            rootfs: 
+              image_arg: -drive format=raw,file={rootfs}
+              # url: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/7/large-sid.img.gz
+              url: http://images.validation.linaro.org/kvm/standard/large-sid-7.img.gz
+              sha256sum: 42f4a314a6e5748edf42a46afe2bb519584d9d00942614992c670bce61e9b21f
+              compression: gz
+        os: debian
+        root_partition: 1
+
+    - boot:
+        method: qemu
+        media: tmpfs
+        prompts: ["root@debian:"]
+        auto_login:
+          login_prompt: "login:"
+          username: root
+
+    - test:
+        name: dispatcher-python3-watchdog
+        timeout:
+          minutes: 45
+        definitions:
+         - repository: http://git.linaro.org/lava-team/refactoring.git
+           from: git
+           path: functional/dispatcher-pipeline-python3.yaml
+           name: unit-tests-python3

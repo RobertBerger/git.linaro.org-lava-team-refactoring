@@ -1,0 +1,71 @@
+job_name: panda-multinode
+
+timeouts:
+  job:
+    minutes: 5
+  action:
+    minutes: 1
+  test:
+    minutes: 3
+  connection:
+    minutes: 2
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: panda-multinode.yaml
+
+protocols:
+  lava-multinode:
+    roles:
+      client:
+        device_type: panda
+        count: 1
+      server:
+        device_type: panda
+        count: 1
+    timeout:
+      seconds: 60
+
+priority: medium
+visibility: public
+
+actions:
+- deploy:
+     role:
+     - server
+     - client
+     timeout:
+       minutes: 2
+     to: tftp
+     kernel:
+       url: http://images.validation.linaro.org/functional-test-images/panda/uImage
+     ramdisk:
+       url: http://images.validation.linaro.org/functional-test-images/common/linaro-image-minimal-initramfs-genericarmv7a.cpio.gz.u-boot
+       compression: gz
+       header: u-boot
+       add-header: u-boot
+     os: oe
+     dtb:
+       url: http://images.validation.linaro.org/functional-test-images/panda/omap4-panda-es.dtb
+
+- boot:
+     role:
+     - server
+     - client
+     timeout:
+       minutes: 4
+     method: u-boot
+     commands: ramdisk
+     type: bootm
+     prompts:
+     - 'linaro-test'
+
+- test:
+     role:
+     - server
+     - client
+     definitions:
+     - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+       from: git
+       path: lava-test-shell/multi-node/multinode02.yaml
+       name: multinode-intermediate

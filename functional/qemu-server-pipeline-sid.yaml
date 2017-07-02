@@ -1,0 +1,60 @@
+device_type: qemu
+job_name: lava server unit tests in Debian unstable
+timeouts:
+  job:
+    hours: 1
+  action:
+    minutes: 5
+  connection:
+    minutes: 1
+priority: medium
+visibility: public
+context:
+  arch: amd64
+  netdevice: tap
+
+tags:
+  - bigmem
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: functional/qemu-server-pipeline-sid.yaml
+  lava.series: release-testing
+  build-readme: http://snapshots.linaro.org/components/lava/standard/debian/jessie/amd64/7/debian-sid-amd64-readme.html
+  build-console: https://ci.linaro.org/view/lava-ci/job/lava-debian-unstable-amd64-vm/7/console
+  build-log: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/7/vmdebootstrap.log
+
+actions:
+
+    - deploy:
+        timeout:
+          minutes: 20
+        to: tmpfs
+        images: 
+            rootfs: 
+              image_arg: -drive format=raw,file={rootfs}
+              url: http://snapshots.linaro.org/components/lava/standard/debian/sid/amd64/7/large-sid.img.gz
+              sha256sum: 42f4a314a6e5748edf42a46afe2bb519584d9d00942614992c670bce61e9b21f
+              compression: gz
+        os: debian
+        root_partition: 1
+
+    - boot:
+        timeout:
+          minutes: 3
+        method: qemu
+        media: tmpfs
+        prompts: ["root@debian:"]
+        auto_login:
+          login_prompt: "login:"
+          username: root
+
+    - test:
+        name: qemu-server-pipeline
+        timeout:
+          minutes: 45
+        definitions:
+            - repository: http://git.linaro.org/lava-team/refactoring.git
+              from: git
+              path: functional/server-pipeline-unit-tests-sid.yaml
+              name: server-pipeline-unittests

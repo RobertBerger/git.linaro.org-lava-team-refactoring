@@ -1,0 +1,43 @@
+device_type: lxc
+job_name: LXC Ubuntu Xenial
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: lxc-ubuntu.yaml
+
+protocols:
+  lava-lxc:
+    name: pipeline-lxc-test
+    distribution: ubuntu
+    release: xenial
+    verbose: true
+
+actions:
+- deploy:
+    timeout:
+      minutes: 30
+    to: lxc
+    os: ubuntu
+
+- boot:
+    prompts:
+    - '[root@(.*) /]#'
+    timeout:
+      minutes: 5
+    method: lxc
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: git://git.linaro.org/qa/test-definitions.git
+      from: git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests-basic

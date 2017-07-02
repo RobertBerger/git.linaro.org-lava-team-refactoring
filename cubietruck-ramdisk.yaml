@@ -1,0 +1,76 @@
+device_type: cubietruck
+job_name: 3.16.0-4-armmp-ramdisk
+priority: medium
+visibility: public
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: cubietruck-ramdisk.yaml
+
+actions:
+- deploy:
+    dtb:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/dtbs/sun7i-a20-cubietruck.dtb
+    kernel:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/vmlinuz-3.16.0-4-armmp
+    modules:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/modules.tgz
+      compression: gz
+    os: oe
+    ramdisk:
+      url: http://people.linaro.org/~neil.williams/armmp/lava/initrd.img-armmp.cpio.gz.u-boot
+      compression: gz
+      header: u-boot
+      add-header: u-boot
+    timeout:
+      minutes: 2
+    to: tftp
+
+- boot:
+    commands: ramdisk
+    method: u-boot
+    prompts:
+    - 'initramfs'
+    timeout:
+      minutes: 2
+    type: bootz
+
+- test:
+    definitions:
+    - from: inline
+      name: modprobe-inline
+      path: inline/modprobe.yaml
+      repository:
+        metadata:
+          description: modprobe network and sata
+          format: Lava-Test Test Definition 1.0
+          name: modules
+          os:
+          - debian
+          scope:
+          - functional
+        run:
+          steps: 
+          - dmesg -n 5
+          - lava-test-case udevadm --shell udevadm hwdb --update
+          - lava-test-case depmod --shell depmod -a
+          - lava-test-case modprobe --shell modprobe stmmac
+          - lava-test-case sata-mod --shell modprobe -a ahci_sunxi sd_mod sg ext4
+          - lava-test-case ifconfig --shell ifconfig eth0 up
+          - lava-test-case udhcpc --shell udhcpc
+          - dmesg -n 7
+    - from: git
+      name: smoke-tests
+      path: ubuntu/smoke-tests-basic.yaml
+      repository: 'git://git.linaro.org/qa/test-definitions.git'
+    - from: git
+      name: singlenode-intermediate
+      path: lava-test-shell/single-node/singlenode02.yaml
+      repository: 'http://git.linaro.org/lava-team/lava-functional-tests.git'
+    timeout:
+      minutes: 5

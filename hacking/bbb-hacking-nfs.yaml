@@ -1,0 +1,53 @@
+device_type: beaglebone-black
+
+# When the test action or the job times out, the hacking session
+# will end without warning.
+
+job_name: nfs-bbb-hacking
+timeouts:
+  # maximum time for the entire job, including hacking.
+  job:
+    minutes: 45
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+actions:
+- deploy:
+    timeout:
+      minutes: 4
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/functional-test-images/bbb/zImage
+    nfsrootfs:
+      url: http://images.validation.linaro.org/debian-jessie-rootfs.tar.gz
+      compression: gz
+    os: debian
+    dtb:
+      url: http://images.validation.linaro.org/functional-test-images/bbb/am335x-bone.dtb
+
+- boot:
+   timeout:
+     minutes: 3
+   method: u-boot
+   commands: nfs
+   type: bootz
+   prompts:
+   - 'root@linaro:'
+   auto_login:
+     login_prompt: "login:"
+     username: root
+
+- test:
+   # maximum time available for hacking.
+   timeout:
+     minutes: 30
+   definitions:
+   - repository: http://git.linaro.org/lava-team/hacking-session.git
+     from: git
+     path: hacking-session-debian.yaml
+     name: hacking
+     parameters:
+       IRC_USER: ""
+       PUB_KEY: ""

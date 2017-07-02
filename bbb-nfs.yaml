@@ -1,0 +1,52 @@
+device_type: beaglebone-black
+
+job_name: Simple NFS test on beaglebone-black
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: bbb-nfs.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 4
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/functional-test-images/bbb/zImage
+    nfsrootfs:
+      url: http://images.validation.linaro.org/debian-jessie-rootfs.tar.gz
+      compression: gz
+    os: debian
+    dtb:
+      url: http://images.validation.linaro.org/functional-test-images/bbb/am335x-bone.dtb
+
+- boot:
+   method: u-boot
+   commands: nfs
+   type: bootz
+   prompts:
+   - 'root@linaro:'
+   timeout:
+     minutes: 3
+
+- test:
+   timeout:
+     minutes: 5
+   definitions:
+     - repository: git://git.linaro.org/qa/test-definitions.git
+       from: git
+       path: ubuntu/smoke-tests-basic.yaml
+       name: smoke-tests
+     - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+       from: git
+       path: lava-test-shell/single-node/singlenode02.yaml
+       name: singlenode-intermediate

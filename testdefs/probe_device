@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Quick script to update an ARM energy probe config file.
+#
+# 1. Find the first likely-looking serial device in /dev/serial/by-id
+# 2. Put it into the config file we're told about on the command line
+
+CONF=$1
+
+ls -alR /dev/
+
+DEVICE=$(ls -1 /dev/serial/by-id/* | head -1)
+if [ "$DEVICE"x = ""x ] ; then
+    echo "Failed to detect an AEP to use. ABORT"
+    exit 1
+fi
+
+cat $CONF | sed "s:PROBE_DEVICE_HERE:$DEVICE:"g > $CONF.1
+mv -f $CONF.1 $CONF
+
+exit 0

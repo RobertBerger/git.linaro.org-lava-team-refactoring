@@ -1,0 +1,45 @@
+device_type: x86
+
+job_name: x86_64 health check
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 3
+  connection:
+    minutes: 2
+
+visibility: public
+priority: medium
+
+actions:
+- deploy:
+    timeout:
+      minutes: 2
+    to: tftp
+    kernel:
+      url: http://images.validation.linaro.org/x86/ubuntu/vmlinuz-3.10-rc7-amd64
+    ramdisk:
+      url: http://images.validation.linaro.org/x86/ubuntu/ubuntu-precise-3.10-networking.gz
+      compression: gz
+    os: ubuntu
+
+- boot:
+    timeout:
+      minutes: 8
+    method: ipxe
+    commands: ramdisk
+    parameters:
+      shutdown-message: "reboot: Restarting system"
+    prompts:
+    - 'root@master:'
+
+- test:
+    timeout:
+      minutes: 2
+    definitions:
+    - repository: http://git.linaro.org/qa/test-definitions.git
+      path: ubuntu/smoke-tests-basic.yaml
+      from: git
+      name: smoke-tests

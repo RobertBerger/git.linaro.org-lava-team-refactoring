@@ -1,0 +1,55 @@
+device_type: panda
+
+job_name: panda-uboot-ramdisk
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: panda-ramdisk.yaml
+
+actions:
+- deploy:
+     timeout:
+       minutes: 2
+     to: tftp
+     kernel:
+       url: http://images.validation.linaro.org/functional-test-images/panda/uImage
+     ramdisk:
+       url: http://images.validation.linaro.org/functional-test-images/common/linaro-image-minimal-initramfs-genericarmv7a.cpio.gz.u-boot
+       compression: gz
+       header: u-boot
+       add-header: u-boot
+     os: oe
+     dtb:
+       url: http://images.validation.linaro.org/functional-test-images/panda/omap4-panda-es.dtb
+
+- boot:
+     method: u-boot
+     commands: ramdisk
+     type: bootm
+     prompts:
+     - "root@debian:"
+     - 'linaro-test'
+     timeout:
+       minutes: 4
+
+- test:
+     timeout:
+       minutes: 5 # uses install:deps, so takes longer than singlenode01
+     definitions:
+     - repository: git://git.linaro.org/qa/test-definitions.git
+       from: git
+       path: ubuntu/smoke-tests-basic.yaml
+       name: smoke-tests
+     - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+       from: git
+       path: lava-test-shell/single-node/singlenode02.yaml
+       name: singlenode-intermediate

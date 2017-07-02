@@ -1,0 +1,37 @@
+device_type: imx6q-wandboard
+
+job_name: uboot-wandboard-armmp
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: wandboard-armmp-ramdisk.yaml
+
+actions:
+- deploy:
+     timeout:
+       minutes: 2
+     to: tftp
+     kernel:
+       url: http://d-i.debian.org/daily-images/armhf/daily/netboot/vmlinuz
+     ramdisk:
+       url: http://images.armcloud.us/lava/common/linaro-image-minimal-initramfs-genericarmv7a.cpio.gz.u-boot
+       compression: gz
+       header: u-boot
+       add-header: u-boot
+     dtb:
+       url: http://d-i.debian.org/daily-images/armhf/daily/device-tree/imx6q-wandboard.dtb
+     os: oe
+
+- boot:
+     timeout:
+       minutes: 1
+     method: u-boot
+     commands: ramdisk
+     type: bootz

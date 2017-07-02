@@ -1,0 +1,50 @@
+# Sample JOB definition for a juno u-boot tftp busybox job
+
+device_type: juno
+
+job_name: juno UBoot NFS test job
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  actions:
+    u-boot-interrupt:
+      seconds: 120
+    auto-login-action:
+      seconds: 300
+    uboot-retry:
+      seconds: 180
+  connections:
+    u-boot-interrupt:
+      seconds: 120
+    auto-login-action:
+      seconds: 300
+    uboot-retry:
+      seconds: 180
+priority: medium
+visibility: public
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: juno-uboot-oe.yaml
+
+actions:
+
+  - deploy:
+     timeout:
+       minutes: 2
+     to: nfs
+     os: oe
+     nfsrootfs:
+         url: http://releases.linaro.org/openembedded/juno-lsk/15.09/linaro-image-minimal-genericarmv8-20150921-770.rootfs.tar.gz
+         compression: gz
+
+  - boot:
+     method: u-boot
+     commands: nfs
+     type: booti
+     parameters:
+       shutdown-message: "reboot: Restarting system"
+     prompts:
+       - 'root@genericarmv8:~#'

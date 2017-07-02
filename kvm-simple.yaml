@@ -1,0 +1,71 @@
+device_type: qemu
+job_name: QEMU amd64 Stretch
+
+timeouts:
+  job:
+    minutes: 15
+  action:
+    minutes: 5
+  connection:
+    minutes: 2
+priority: medium
+visibility: public
+context:
+  arch: amd64
+
+metadata:
+  source: https://git.linaro.org/lava-team/refactoring.git
+  path: kvm-simple.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 5
+    to: tmpfs
+    images:
+        rootfs:
+          image_arg: -drive format=raw,file={rootfs}
+          url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/stretch/amd64/2/stretch.img.gz
+          compression: gz
+    os: debian
+    root_partition: 1
+
+- boot:
+    method: qemu
+    media: tmpfs
+    timeout:
+      minutes: 5
+    prompts: 
+    - "root@debian:" 
+    auto_login:
+      login_prompt: "debian login:"
+      username: root
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - from: inline
+      repository:
+        metadata:
+          format: Lava-Test Test Definition 1.0
+          name: smoke-tests-basic
+          description: "Basic system test command for Linaro Ubuntu images"
+        run:
+          steps:
+          - printenv
+      name: env-dut-inline
+      path: inline/env-dut.yaml
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - from: git
+      repository: git://git.linaro.org/qa/test-definitions.git
+      path: ubuntu/smoke-tests-basic.yaml
+      name: smoke-tests
+    - from: git
+      repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+      path: lava-test-shell/single-node/singlenode03.yaml
+      name: singlenode-advanced
