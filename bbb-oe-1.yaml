@@ -1,0 +1,56 @@
+device_type: beaglebone-black
+
+job_name: bbb-nfs
+timeouts:
+  job:
+    minutes: 20
+  action:
+    minutes: 10
+  connection:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://github.com/RobertBerger/git.linaro.org-lava-team-refactoring.git
+  path: bbb-oe-1.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 8
+    to: tftp
+    kernel:
+#      url: /home/hua/lava/bili/images/uImage
+       url: http://192.168.42.1/lava/beagle-bone-black/uImage-multi-v7-ml.bin
+    nfsrootfs:
+#      url: /home/hua/lava/bili/images/targetfs.tar.gz
+       url: http://192.168.42.1/lava/beagle-bone-black/core-image-minimal-multi-v7-ml.tar.gz
+      compression: gz
+    os: oe
+    dtb:
+#      url: /home/hua/lava/bili/images/dra7-g5-r1.dtb
+       url: http://192.168.42.1/lava/beagle-bone-black/uImage-am335x-boneblack.dtb
+
+- boot:
+    method: u-boot
+    commands: nfs
+    type: bootm
+    auto_login:
+      login_prompt: 'login:'
+      username: root
+#      password_prompt: 'Password:'
+#      password: os17
+    prompts:
+    - 'root@multi-v7-ml:'
+    timeout:
+      minutes: 5
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: https://github.com/RobertBerger/git.linaro.org-lava-team-refactoring.git
+      from: git
+      path: openembedded/smoke-tests-gru.yaml
+      name: smoke-tests
