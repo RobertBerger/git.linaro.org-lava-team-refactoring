@@ -1,0 +1,51 @@
+device_type: beaglebone-black
+
+job_name: bbb-nfs-core-image-sato-sdk-1
+timeouts:
+  job:
+    minutes: 20
+  action:
+    minutes: 10
+  connection:
+    minutes: 5
+priority: medium
+visibility: public
+
+metadata:
+  source: https://github.com/RobertBerger/git.linaro.org-lava-team-refactoring.git
+  path: bbb-nfs-core-image-sato-sdk-1.yaml
+
+actions:
+- deploy:
+    timeout:
+      minutes: 8
+    to: tftp
+    kernel:
+      url: http://192.168.42.1/lava/beagle-bone-black/uImage-multi-v7-ml.bin
+    nfsrootfs:
+      url: http://192.168.42.1/lava/beagle-bone-black/core-image-sato-sdk-multi-v7-ml.tar.gz
+      compression: gz
+    os: oe
+    dtb:
+      url: http://192.168.42.1/lava/beagle-bone-black/uImage-am335x-boneblack.dtb
+
+- boot:
+    method: u-boot
+    commands: nfs
+    type: bootm
+    auto_login:
+      login_prompt: 'login:'
+      username: root
+    prompts:
+    - 'root@multi-v7-ml:'
+    timeout:
+      minutes: 5
+
+- test:
+    timeout:
+      minutes: 5
+    definitions:
+    - repository: https://github.com/RobertBerger/git.linaro.org-qa-test-definitions.git
+      from: git
+      path: openembedded/smoke-tests-basic-core-image-sato-sdk.yaml
+      name: smoke-tests
