@@ -1,0 +1,55 @@
+# Sample JOB definition for a u-boot job
+
+device_type: beaglebone-black
+
+job_name: uboot-pipeline
+timeouts:
+  job:
+    minutes: 30
+  action:
+    minutes: 5
+priority: medium
+visibility: public
+
+actions:
+
+  # needs to be a list of hashes to retain the order
+  - deploy:
+     timeout:
+       minutes: 2
+     to: tftp
+     kernel:
+         url: http://images.validation.linaro.org/functional-test-images/bbb/zImage
+         type: zimage
+     nfsrootfs:
+         url: http://images.validation.linaro.org/snapshots.linaro.org/components/lava/standard/debian/jessie/armhf/4/jessie-armhf-nfs.tar.gz
+         compression: gz
+     os: debian
+     dtb:
+         url: http://images.validation.linaro.org/functional-test-images/bbb/am335x-bone.dtb
+
+  - boot:
+     timeout:
+       minutes: 4
+     method: u-boot
+     commands: nfs
+     auto_login:
+       login_prompt: 'login:'
+       username: root
+     prompts:
+     - 'root@jessie:'
+
+  - test:
+     failure_retry: 3
+     timeout:
+       minutes: 15
+     definitions:
+         - repository: git://git.linaro.org/qa/test-definitions.git
+           from: git
+           path: ubuntu/smoke-tests-basic.yaml
+           name: smoke-tests
+         - repository: http://git.linaro.org/lava-team/lava-functional-tests.git
+           from: git
+           path: lava-test-shell/single-node/singlenode03.yaml
+           name: singlenode-advanced
+
