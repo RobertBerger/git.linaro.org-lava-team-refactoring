@@ -1,6 +1,6 @@
 device_type: beaglebone-black
 
-job_name: bbb-nfs
+job_name: bbb-nfs-core-image-minimal-1
 timeouts:
   job:
     minutes: 20
@@ -13,7 +13,7 @@ visibility: public
 
 metadata:
   source: https://github.com/RobertBerger/git.linaro.org-lava-team-refactoring.git
-  path: bbb-core-image-minimal-1.yaml
+  path: bbb-nfs-core-image-minimal-1.yaml
 
 actions:
 - deploy:
